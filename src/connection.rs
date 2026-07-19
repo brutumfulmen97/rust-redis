@@ -1,6 +1,7 @@
+use crate::Result;
+use crate::frame::Error::Incomplete;
+use crate::frame::Frame;
 use bytes::{Buf, BytesMut};
-use mini_redis::frame::Error::Incomplete;
-use mini_redis::{Frame, Result};
 use std::io::Cursor;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
 use tokio::net::TcpStream;
