@@ -4,12 +4,24 @@ pub use get::Get;
 mod set;
 pub use set::Set;
 
-use crate::{frame::Frame, parse::Parse};
+mod ping;
+pub use ping::Ping;
+
+mod del;
+pub use del::Del;
+
+mod exists;
+pub use exists::Exists;
+
+use crate::{connection::Connection, db::Db, frame::Frame, parse::Parse};
 
 #[derive(Debug)]
 pub enum Command {
     Get(Get),
     Set(Set),
+    Del(Del),
+    Exists(Exists),
+    Ping(Ping),
 }
 
 impl Command {
@@ -19,9 +31,22 @@ impl Command {
         let command = match &command_name[..] {
             "get" => Command::Get(Get::parse_frames(&mut parse)?),
             "set" => Command::Set(Set::parse_frames(&mut parse)?),
+            "del" => Command::Del(Del::parse_frames(&mut parse)?),
+            "ping" => Command::Ping(Ping::parse_frames(&mut parse)?),
+            "exists" => Command::Exists(Exists::parse_frames(&mut parse)?),
             _ => return Err(format!("unknown command: {command_name}").into()),
         };
         parse.finish()?;
         Ok(command)
+    }
+
+    pub(crate) async fn apply(self, db: &Db, dst: &mut Connection) -> crate::Result<()> {
+        match self {
+            Command::Del(cmd) => cmd.apply(db, dst).await,
+            Command::Exists(cmd) => cmd.apply(db, dst).await,
+            Command::Get(cmd) => cmd.apply(db, dst).await,
+            Command::Ping(cmd) => cmd.apply(dst).await,
+            Command::Set(cmd) => cmd.apply(db, dst).await,
+        }
     }
 }

@@ -70,4 +70,17 @@ impl Set {
 
         frame
     }
+
+    pub(crate) fn apply(
+        self,
+        db: &crate::db::Db,
+        dst: &mut crate::connection::Connection,
+    ) -> impl std::future::Future<Output = crate::Result<()>> {
+        async move {
+            db.set(&self.key, self.value);
+            let response = Frame::Simple("OK".to_string());
+            dst.write_frame(&response).await?;
+            Ok(())
+        }
+    }
 }

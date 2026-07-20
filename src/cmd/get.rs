@@ -30,4 +30,21 @@ impl Get {
         frame.push_bulk(Bytes::from(self.key.into_bytes()));
         frame
     }
+
+    pub(crate) fn apply(
+        self,
+        db: &crate::db::Db,
+        dst: &mut crate::connection::Connection,
+    ) -> impl std::future::Future<Output = crate::Result<()>> {
+        async move {
+            let response = if let Some(value) = db.get(&self.key()) {
+                Frame::Bulk(value)
+            } else {
+                Frame::Null
+            };
+
+            dst.write_frame(&response).await?;
+            Ok(())
+        }
+    }
 }
