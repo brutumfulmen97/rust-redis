@@ -3,7 +3,7 @@ use tokio::net::TcpStream;
 
 use crate::{
     Result,
-    cmd::{Get, Set},
+    cmd::{Del, Get, Ping, Set},
     connection::Connection,
     frame::Frame,
 };
@@ -41,6 +41,31 @@ impl Client {
 
         match self.connection.read_frame().await? {
             Some(Frame::Simple(ref res)) if res == "OK" => Ok(()),
+            Some(frame) => Err(frame.to_error()),
+            None => Err("connection reset by server".into()),
+        }
+    }
+
+    pub async fn ping(&mut self, msg: Option<Bytes>) -> Result<Bytes> {
+        let frame = Ping::new(msg).into_frame();
+
+        self.connection.write_frame(&frame).await?;
+
+        match self.connection.read_frame().await? {
+            Some(Frame::Simple(s)) => Ok(s.into()),
+            Some(Frame::Bulk(msg)) => Ok(msg),
+            Some(frame) => Err(frame.to_error()),
+            None => Err("connection reset by server".into()),
+        }
+    }
+
+    pub async fn del(&mut self, keys: Vec<String>) -> Result<u64> {
+        let frame = Del::new(keys).into_frame();
+
+        self.connection.write_frame(&frame).await?;
+
+        match self.connection.read_frame().await? {
+            Some(Frame::Integer(i)) => Ok(i),
             Some(frame) => Err(frame.to_error()),
             None => Err("connection reset by server".into()),
         }

@@ -23,18 +23,6 @@ impl Set {
         }
     }
 
-    pub fn key(&self) -> &str {
-        &self.key
-    }
-
-    pub fn value(&self) -> &Bytes {
-        &self.value
-    }
-
-    pub fn expire(&self) -> Option<Duration> {
-        self.expire
-    }
-
     pub(crate) fn parse_frames(parse: &mut Parse) -> crate::Result<Set> {
         let key = parse.next_string()?;
         let value = parse.next_bytes()?;

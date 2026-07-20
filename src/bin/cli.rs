@@ -45,10 +45,16 @@ async fn main() -> rust_redis::Result<()> {
             println!("OK");
         }
         Command::Del { keys } => {
-            println!("not implemented yet");
+            let res = client.del(keys).await?;
+            println!("{res}");
         }
         Command::Ping { msg } => {
-            println!("not implemented yet");
+            let res = client.ping(msg.map(|m| m.into())).await?;
+            if let Ok(s) = std::str::from_utf8(&res) {
+                println!("\"{s}\"");
+            } else {
+                println!("{res:?}");
+            }
         }
     }
 
