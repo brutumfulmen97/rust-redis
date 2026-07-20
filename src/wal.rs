@@ -49,7 +49,7 @@ impl Wal {
             match Frame::check(&mut buf) {
                 Ok(_) => {
                     let len = buf.position() as usize;
-                    buf.set_position(cursor.position());
+                    buf.set_position(0);
                     let frame = match Frame::parse(&mut buf) {
                         Ok(frame) => frame,
                         Err(_) => break,
