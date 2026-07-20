@@ -1,17 +1,17 @@
 mod get;
 pub use get::Get;
-
 mod set;
 pub use set::Set;
-
 mod ping;
 pub use ping::Ping;
-
 mod del;
 pub use del::Del;
-
 mod exists;
 pub use exists::Exists;
+mod expire;
+pub use expire::Expire;
+mod ttl;
+pub use ttl::Ttl;
 
 use crate::{connection::Connection, db::Db, frame::Frame, parse::Parse};
 
@@ -22,6 +22,8 @@ pub enum Command {
     Del(Del),
     Exists(Exists),
     Ping(Ping),
+    Ttl(Ttl),
+    Expire(Expire),
 }
 
 impl Command {
@@ -34,6 +36,8 @@ impl Command {
             "del" => Command::Del(Del::parse_frames(&mut parse)?),
             "ping" => Command::Ping(Ping::parse_frames(&mut parse)?),
             "exists" => Command::Exists(Exists::parse_frames(&mut parse)?),
+            "ttl" => Command::Ttl(Ttl::parse_frames(&mut parse)?),
+            "expire" => Command::Expire(Expire::parse_frames(&mut parse)?),
             _ => return Err(format!("unknown command: {command_name}").into()),
         };
         parse.finish()?;
@@ -47,6 +51,8 @@ impl Command {
             Command::Get(cmd) => cmd.apply(db, dst).await,
             Command::Ping(cmd) => cmd.apply(dst).await,
             Command::Set(cmd) => cmd.apply(db, dst).await,
+            Command::Ttl(cmd) => cmd.apply(db, dst).await,
+            Command::Expire(cmd) => cmd.apply(db, dst).await,
         }
     }
 }

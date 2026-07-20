@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 
@@ -77,7 +77,8 @@ impl Set {
         dst: &mut crate::connection::Connection,
     ) -> impl std::future::Future<Output = crate::Result<()>> {
         async move {
-            db.set(&self.key, self.value);
+            let expire = self.expire.map(|d| Instant::now() + d);
+            db.set(&self.key, self.value, expire);
             let response = Frame::Simple("OK".to_string());
             dst.write_frame(&response).await?;
             Ok(())
