@@ -117,6 +117,38 @@ impl Frame {
             _ => unimplemented!(),
         }
     }
+
+    pub(crate) fn to_error(&self) -> crate::Error {
+        format!("unexpected frame: {self}").into()
+    }
+}
+
+impl fmt::Display for Frame {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use std::str;
+
+        match self {
+            Frame::Simple(response) => response.fmt(f),
+            Frame::Error(msg) => write!(f, "error: {msg}"),
+            Frame::Integer(num) => num.fmt(f),
+            Frame::Bulk(msg) => match str::from_utf8(msg) {
+                Ok(string) => string.fmt(f),
+                Err(_) => write!(f, "{msg:?}"),
+            },
+            Frame::Null => "(nil)".fmt(f),
+            Frame::Array(frames) => {
+                for (i, part) in frames.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+
+                    part.fmt(f)?;
+                }
+
+                Ok(())
+            }
+        }
+    }
 }
 
 fn peek_u8(src: &mut Cursor<&[u8]>) -> Result<u8, Error> {

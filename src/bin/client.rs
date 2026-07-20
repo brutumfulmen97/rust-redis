@@ -1,8 +1,8 @@
 use bytes::Bytes;
-use mini_redis::client;
+use rust_redis::client::Client;
 use tokio::sync::{mpsc, oneshot};
 
-type Responder<T> = oneshot::Sender<mini_redis::Result<T>>;
+type Responder<T> = oneshot::Sender<rust_redis::Result<T>>;
 
 #[derive(Debug)]
 enum Command {
@@ -22,7 +22,7 @@ async fn main() {
     let (tx, mut rx) = mpsc::channel(32);
 
     let manager = tokio::spawn(async move {
-        let mut client = client::connect("127.0.0.1:6379").await.unwrap();
+        let mut client = Client::connect("127.0.0.1:6379").await.unwrap();
         while let Some(cmd) = rx.recv().await {
             use Command::*;
 

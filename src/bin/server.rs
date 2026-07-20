@@ -1,5 +1,6 @@
 use bytes::Bytes;
-use mini_redis::{Connection, Frame};
+use rust_redis::connection::Connection;
+use rust_redis::frame::Frame;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
@@ -31,7 +32,7 @@ async fn main() {
 }
 
 async fn process(socket: TcpStream, db: Db) {
-    use mini_redis::Command::{self, Get, Set};
+    use rust_redis::cmd::Command::{self, Get, Set};
 
     let mut connection = Connection::new(socket);
 
@@ -50,7 +51,6 @@ async fn process(socket: TcpStream, db: Db) {
                     Frame::Null
                 }
             }
-            cmd => panic!("unimplemented {:?}", cmd),
         };
 
         connection.write_frame(&res).await.unwrap();
