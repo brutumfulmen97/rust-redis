@@ -71,14 +71,18 @@ impl Set {
         frame
     }
 
+    pub(crate) fn apply_to_db(self, db: &crate::db::Db) {
+        let expire = self.expire.map(|d| Instant::now() + d);
+        db.set(&self.key, self.value, expire);
+    }
+
     pub(crate) fn apply(
         self,
         db: &crate::db::Db,
         dst: &mut crate::connection::Connection,
     ) -> impl std::future::Future<Output = crate::Result<()>> {
         async move {
-            let expire = self.expire.map(|d| Instant::now() + d);
-            db.set(&self.key, self.value, expire);
+            self.apply_to_db(db);
             let response = Frame::Simple("OK".to_string());
             dst.write_frame(&response).await?;
             Ok(())

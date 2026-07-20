@@ -35,13 +35,18 @@ impl Del {
         frame
     }
 
+    pub(crate) fn apply_to_db(self, db: &crate::db::Db) -> u64 {
+        let count = self.keys.iter().filter(|k| db.del(k)).count() as u64;
+        count
+    }
+
     pub(crate) fn apply(
         self,
         db: &crate::db::Db,
         dst: &mut crate::connection::Connection,
     ) -> impl std::future::Future<Output = crate::Result<()>> {
         async move {
-            let count = self.keys.iter().filter(|k| db.del(k)).count() as u64;
+            let count = self.apply_to_db(db);
             dst.write_frame(&Frame::Integer(count)).await?;
             Ok(())
         }

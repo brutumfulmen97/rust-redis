@@ -1,6 +1,6 @@
 use crate::frame::Error::Incomplete;
 use crate::frame::Frame;
-use bytes::{Buf, BytesMut};
+use bytes::{Buf, Bytes, BytesMut};
 use std::io::{self, Cursor};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
 use tokio::net::TcpStream;
@@ -35,6 +35,22 @@ impl Connection {
         }
     }
 
+    pub async fn read_frame_as_bytes(&mut self) -> crate::Result<Option<(Frame, Bytes)>> {
+        loop {
+            if let Some((frame, bytes)) = self.parse_frame_with_bytes()? {
+                return Ok(Some((frame, bytes)));
+            }
+
+            if 0 == self.stream.read_buf(&mut self.buffer).await? {
+                if self.buffer.is_empty() {
+                    return Ok(None);
+                } else {
+                    return Err("connection reset by peer".into());
+                }
+            }
+        }
+    }
+
     fn parse_frame(&mut self) -> crate::Result<Option<Frame>> {
         let mut buf = Cursor::new(&self.buffer[..]);
 
@@ -46,6 +62,24 @@ impl Connection {
                 self.buffer.advance(len);
 
                 Ok(Some(frame))
+            }
+            Err(Incomplete) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn parse_frame_with_bytes(&mut self) -> crate::Result<Option<(Frame, Bytes)>> {
+        let mut buf = Cursor::new(&self.buffer[..]);
+
+        match Frame::check(&mut buf) {
+            Ok(_) => {
+                let len = buf.position() as usize;
+                let raw = Bytes::copy_from_slice(&self.buffer[..len]);
+                buf.set_position(0);
+                let frame = Frame::parse(&mut buf)?;
+                self.buffer.advance(len);
+
+                Ok(Some((frame, raw)))
             }
             Err(Incomplete) => Ok(None),
             Err(e) => Err(e.into()),

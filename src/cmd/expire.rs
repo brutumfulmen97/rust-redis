@@ -15,14 +15,18 @@ impl Expire {
         Ok(Expire { key, seconds })
     }
 
+    pub(crate) fn apply_to_db(self, db: &Db) -> bool {
+        let expires_at = Instant::now() + Duration::from_secs(self.seconds);
+        db.expire(&self.key, expires_at)
+    }
+
     pub(crate) fn apply(
         self,
         db: &Db,
         dst: &mut Connection,
     ) -> impl std::future::Future<Output = crate::Result<()>> {
         async move {
-            let expires_at = Instant::now() + Duration::from_secs(self.seconds);
-            let ok = db.expire(&self.key, expires_at);
+            let ok = self.apply_to_db(db);
             dst.write_frame(&Frame::Integer(if ok { 1 } else { 0 }))
                 .await?;
             Ok(())

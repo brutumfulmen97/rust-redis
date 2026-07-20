@@ -55,4 +55,27 @@ impl Command {
             Command::Expire(cmd) => cmd.apply(db, dst).await,
         }
     }
+
+    pub(crate) fn apply_to_db(self, db: &Db) -> crate::Result<()> {
+        match self {
+            Command::Del(cmd) => {
+                cmd.apply_to_db(db);
+            }
+            Command::Expire(cmd) => {
+                cmd.apply_to_db(db);
+            }
+            Command::Set(cmd) => {
+                cmd.apply_to_db(db);
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    pub(crate) fn is_write(&self) -> bool {
+        match self {
+            Command::Set(_) | Command::Del(_) | Command::Expire(_) => true,
+            _ => false,
+        }
+    }
 }
