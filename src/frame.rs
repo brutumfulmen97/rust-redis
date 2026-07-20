@@ -19,6 +19,17 @@ pub enum Error {
 }
 
 impl Frame {
+    pub(crate) fn array() -> Frame {
+        Frame::Array(vec![])
+    }
+
+    pub(crate) fn push_bulk(&mut self, bytes: impl Into<Bytes>) {
+        match self {
+            Frame::Array(vec) => vec.push(Frame::Bulk(bytes.into())),
+            _ => panic!("not an array frame"),
+        }
+    }
+
     pub fn check(src: &mut Cursor<&[u8]>) -> Result<(), Error> {
         match get_u8(src)? {
             b'+' | b'-' => {
