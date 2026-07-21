@@ -101,3 +101,76 @@ impl Entry {
             .unwrap_or(false)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+
+    #[test]
+    fn set_and_get() {
+        let db = Db::new();
+        db.set("key", Bytes::from("value"), None);
+        assert_eq!(db.get("key"), Some(Bytes::from("value")));
+    }
+
+    #[test]
+    fn get_missing_key() {
+        let db = Db::new();
+        assert_eq!(db.get("missing"), None);
+    }
+
+    #[test]
+    fn del_existing_key() {
+        let db = Db::new();
+        db.set("key", Bytes::from("value"), None);
+        assert!(db.del("key"));
+        assert_eq!(db.get("key"), None);
+    }
+
+    #[test]
+    fn del_missing_key() {
+        let db = Db::new();
+        assert!(!db.del("missing"));
+    }
+
+    #[test]
+    fn exists() {
+        let db = Db::new();
+        assert!(!db.exists("key"));
+        db.set("key", Bytes::from("v"), None);
+        assert!(db.exists("key"));
+    }
+
+    #[test]
+    fn expire_and_ttl() {
+        let db = Db::new();
+        db.set("key", Bytes::from("v"), None);
+        let future = Instant::now() + Duration::from_secs(10);
+        assert!(db.expire("key", future));
+        let ttl = db.ttl("key", Instant::now());
+        assert!(ttl.is_some());
+        assert!(ttl.unwrap().as_secs() <= 10);
+    }
+
+    #[test]
+    fn expire_nonexistent_key() {
+        let db = Db::new();
+        let future = Instant::now() + Duration::from_secs(10);
+        assert!(!db.expire("missing", future));
+    }
+
+    #[test]
+    fn expired_key_returns_none() {
+        let db = Db::new();
+        // Set expiry in the past
+        db.set(
+            "key",
+            Bytes::from("v"),
+            Some(Instant::now() - Duration::from_secs(1)),
+        );
+        // On access, the key should be treated as expired
+        assert_eq!(db.get("key"), None);
+        assert!(!db.exists("key"));
+    }
+}

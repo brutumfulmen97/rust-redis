@@ -79,3 +79,43 @@ impl Command {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::frame::Frame;
+    use bytes::Bytes;
+
+    #[test]
+    fn parse_get_command() {
+        let frame = Frame::Array(vec![Frame::Bulk("GET".into()), Frame::Bulk("foo".into())]);
+        let cmd = Command::from_frame(frame).unwrap();
+        match cmd {
+            Command::Get(get) => assert_eq!(get.key(), "foo"),
+            _ => panic!("expected Get command"),
+        }
+    }
+
+    #[test]
+    fn parse_set_command() {
+        let frame = Frame::Array(vec![
+            Frame::Bulk("SET".into()),
+            Frame::Bulk("key".into()),
+            Frame::Bulk("value".into()),
+        ]);
+        let cmd = Command::from_frame(frame).unwrap();
+        match cmd {
+            Command::Set(set) => {
+                assert_eq!(set.key(), "key");
+                assert_eq!(set.value(), &Bytes::from("value"));
+            }
+            _ => panic!("expected Set command"),
+        }
+    }
+
+    #[test]
+    fn parse_unknown_command() {
+        let frame = Frame::Array(vec![Frame::Bulk("not_a_command".into())]);
+        assert!(Command::from_frame(frame).is_err());
+    }
+}
