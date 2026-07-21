@@ -231,3 +231,83 @@ impl fmt::Display for Error {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn parse_simple_string() {
+        let bytes = b"+OK\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_ok());
+        buf.set_position(0);
+        let frame = Frame::parse(&mut buf).unwrap();
+        assert_eq!(format!("{frame}"), "OK");
+    }
+
+    #[test]
+    fn parse_bulk_string() {
+        let bytes = b"$5\r\nhello\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_ok());
+        buf.set_position(0);
+        let frame = Frame::parse(&mut buf).unwrap();
+        assert_eq!(format!("{frame}"), "hello");
+    }
+
+    #[test]
+    fn parse_null() {
+        let bytes = b"$-1\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_ok());
+        buf.set_position(0);
+        let frame = Frame::parse(&mut buf).unwrap();
+        assert_eq!(format!("{frame}"), "(nil)");
+    }
+
+    #[test]
+    fn parse_integer() {
+        let bytes = b":42\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_ok());
+        buf.set_position(0);
+        let frame = Frame::parse(&mut buf).unwrap();
+        assert_eq!(format!("{frame}"), "42");
+    }
+
+    #[test]
+    fn parse_error() {
+        let bytes = b"-ERR something\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_ok());
+        buf.set_position(0);
+        let frame = Frame::parse(&mut buf).unwrap();
+        assert_eq!(format!("{frame}"), "error: ERR something");
+    }
+
+    #[test]
+    fn parse_array() {
+        let bytes = b"*2\r\n$3\r\nGET\r\n$3\r\nfoo\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_ok());
+        buf.set_position(0);
+        let frame = Frame::parse(&mut buf).unwrap();
+        assert_eq!(format!("{frame}"), "GET foo");
+    }
+
+    #[test]
+    fn parse_incomplete_returns_incomplete() {
+        let bytes = b"+OK"; // missing \r\n
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(matches!(Frame::check(&mut buf), Err(Error::Incomplete)));
+    }
+
+    #[test]
+    fn parse_invalid_type_byte() {
+        let bytes = b"!hello\r\n";
+        let mut buf = Cursor::new(&bytes[..]);
+        assert!(Frame::check(&mut buf).is_err());
+    }
+}
